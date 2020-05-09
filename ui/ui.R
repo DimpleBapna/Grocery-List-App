@@ -1,11 +1,15 @@
 library(shiny)
 library(shinydashboard)
+library(shinydashboardPlus)
 source("./data/data.R")
 library(dashboardthemes)
 
 # define UI logic
-ui <- dashboardPage(
-  dashboardHeader(title = "Rapid Groceries", titleWidth = 320),
+ui <- dashboardPagePlus(
+  dashboardHeaderPlus(
+    enable_rightsidebar = TRUE,
+    rightSidebarIcon = "gears",
+    title = "Rapid Groceries", titleWidth = 320),
   dashboardSidebar(
     width = 320,
     selectizeInput(
@@ -49,22 +53,56 @@ ui <- dashboardPage(
         column(width =6, plotly::plotlyOutput("centralPlot", height = "450px", width = "450px"))
       ),tags$hr(),
       fluidRow(
-        column(width = 12,
-               uiOutput("instructionUI"),
-               uiOutput("instructionSteps"))
+        # column(width = 9,
+        #       # uiOutput("instructionUI"),
+        #        uiOutput("instructionSteps")),
+        # column(width = 3,
+        #        uiOutput("url"))
       ),tags$hr(),
-      fluidRow(
-        uiOutput('pie_chart_choices')
-      ),
+       fluidRow(
+         uiOutput('pie_chart_choices')
+       ),
       fluidRow(
         width = 10,
         plotly::plotlyOutput('pie_chart', width = "1000px"),
       ),tags$hr(),
-      fluidRow(
-        uiOutput("MachineLearningUI")
-      )
+      # fluidRow(
+      #   uiOutput("MachineLearningUI")
+      # )
 
         
     ) #end fluidPage
+  ),rightsidebar = rightSidebar(
+    background = "dark",
+    width = 350,
+    rightSidebarTabContent(
+      id = 1,
+      title = "Go to URL",
+      icon = "desktop",
+      active = TRUE,
+      uiOutput("instruction_URL"),
+      uiOutput("url")
+    ),
+    rightSidebarTabContent(
+      id = 2,
+      title = "Recommendation",
+      uiOutput("MachineLearningUI")
+      
+    ),
+    rightSidebarTabContent(
+      id = 3,
+      icon = "paint-brush",
+      title = "Instructions",
+      uiOutput("instructionUI"),
+      uiOutput("instructionSteps")
+    )
+  #,
+  #   rightSidebarTabContent(
+  #     id = 4,
+  #     icon = "paint-brush",
+  #     title = "Dev Info",
+  #     uiOutput("Developer")
+  # )
   )
 )
+

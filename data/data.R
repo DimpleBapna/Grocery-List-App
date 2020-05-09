@@ -2,6 +2,7 @@ recipe_csv <- read.csv("data/final_data.csv")
 bubble_data <- read.csv('data/Bubble.csv')
 recipe_data <- recipe_csv[c(3, 5, 6, 7, 9, 10, 13, 14, 16, 18, 20)]
 
+
 colnames(recipe_data) <-
   c(
     'url',
@@ -80,6 +81,7 @@ gmtable<-round(gmtable,2)
 rownames(gmtable)<-NULL
 recipe_data<-cbind(recipe_data,gmtable)
 recipe_data<- recipe_data %>% rename('Energy_100'=energy,'Fat_100'=fat,'Proteins_100'=proteins,'Salt_100'=salt,'Saturated fat_100'=saturates,'Sugar_100'=sugars)
+recipe_data
 
 
 

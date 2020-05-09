@@ -53,6 +53,7 @@ server <- function(input, output) {
         step = 1
       )
     })
+    
     output$add <- renderUI({
       actionButton(
         inputId = "Add",
@@ -63,6 +64,7 @@ server <- function(input, output) {
     values$deletedRows <- NULL
     values$deletedRowIndices = list()
   })
+  
   observeEvent(input$Add, {
     ingredients <-
       as.vector(get_ingredients(input$recipe))
@@ -108,6 +110,20 @@ server <- function(input, output) {
       )
     })
     
+   # output$Developer <-  renderUI({
+   #   widgetUserBox(
+   #   title = "Soumyajeet Patra",
+   #   subtitle = "MS DAE 2019",
+   #   type = NULL,
+   #   width = 12,
+   #   src = "./www/Soumyajeet.png",
+   #   background = TRUE,
+   #   backgroundUrl = "https://images.pexels.com/photos/531880/pexels-photo-531880.jpeg?auto=compress&cs=tinysrgb&h=350",
+   #   closable = TRUE,
+   #   "R Shiny App Developer",
+   # )
+   # })
+    
     output$RecipeListUI <- renderUI({
       box(
         title = "Recipes...",
@@ -122,6 +138,22 @@ server <- function(input, output) {
       selectInput("InstructionRecipe",
                   label = "Instructions",
                   choices = recipe_df$df$Recipes)
+    })
+    output$instruction_URL <- renderUI({
+      selectInput("InstructionURL",
+                  label = "Instructions",
+                  choices = recipe_df$df$Recipes)
+    })
+    observeEvent(input$InstructionURL,{
+      link <- recipe_data$url[recipe_data$title == input$InstructionURL]
+      
+      output$url <- renderUI({
+        return(actionButton("url",
+                            label = "Link to Web Page",
+                            icon = icon("twitter"),
+                            size = "lg",
+                            style = "bordered",
+                            onclick = sprintf("window.open('%s')", link)))})
     })
     
     df <-
@@ -201,7 +233,7 @@ server <- function(input, output) {
       row_data <- bubble_data %>% filter(title == c(i))
       bubble_df <- rbind(bubble_df, row_data)
     }
-    
+
     output$bubble_chart <- plotly::renderPlotly({
       #colors <- c('#4AC6B7', '#1972A4', '#965F8A', '#FF7070', '#C61951')
       colors <- c('#FF5733', '#7AFF33', '#33FFF0', '#333CFF', '#FF33E9')
@@ -214,13 +246,14 @@ server <- function(input, output) {
           type = 'scatter',
           mode = 'markers',
           color = ~ title,
-          sizes = c(50, 100),
-          colors = colors
+          sizes = c(10, 100),
+          colors = colors,
+          size=~weights
           ,
           marker = list(
             sizemode = 'diameter',
-            opacity = 0.5,
-            size = ~ sqrt(weights) * 2
+            opacity = 0.5
+           # size = ~ sqrt(weights) * 2
           ) ,
           hoverinfo = 'text',
           text = ~ paste(
@@ -313,24 +346,29 @@ server <- function(input, output) {
                  plot_bgcolor ='rgba(0,0,0,0)'
                  ) %>%
           add_annotations(y=1.07, x=0.5, text=~paste(""),
-                                                                                                                                                                     showarrow=F,font=list(size=15))%>%add_annotations(x=0.1,y=0.3, text='Nutrition Per 100 grams', showarrow=F,font=list(size=14))%>%add_annotations (x=0.88,y=0.3,text='Nutrition Per Ingredients', showarrow=F,font=list(size=14))
+          showarrow=F,font=list(size=15))%>%add_annotations(x=0.1,y=0.3, text='Nutrition Per 100 grams', showarrow=F,font=list(size=14))%>%add_annotations (x=0.88,y=0.3,text='Nutrition Per Ingredients', showarrow=F,font=list(size=14))
         fig
       }) 
       
       output$MachineLearningUI <- renderUI({
         mutated_rules <-
-          rules_df %>% mutate(to = str_split(LHS, ","))%>% select(lift, confidence, to, RHS, count) 
+          rules_df %>% mutate(to = str_split(LHS, ","))%>% dplyr::select(lift, confidence, to, RHS, count) 
         
         matched_rules <- data.frame(RHS = as.character(), confidence = as.integer(), lift = as.integer())
         for(i in 1:length(mutated_rules$to)){
           if(all(mutated_rules$to[[i]] %in% grocery_data$df$Ingredients)){
             matched_rules <- rbind(matched_rules, mutated_rules[i,c("RHS","confidence","lift")])
+          
           }
         }
-        matched_rules
+        matched_rules<-matched_rules%>%dplyr::select(-c(lift))%>%rename('Recommended Ingredients'=RHS)
         box(
-          title ="Recommending Groceries",
-          renderTable({matched_rules[!duplicated(matched_rules$RHS),]})
+          title =" ",
+          width = 12,
+          renderTable({
+            matched_rules[!duplicated(matched_rules$`Recommended Ingredients`),]
+            matched_rules%>%dplyr::select(`Recommended Ingredients`)
+          })
         )
       })
       
@@ -346,7 +384,7 @@ server <- function(input, output) {
       return(
         box(
           title = input$InstructionRecipe,
-          width = 6,
+          width = 12,
           solidHeader = TRUE,
           #gradientColor = "teal",
           status = "primary",
@@ -360,6 +398,17 @@ server <- function(input, output) {
       
       
     })
+    
+    # link <- recipe_data$url[recipe_data$title == input$InstructionURL]
+    # 
+    # output$url <- renderUI({
+    #   return(actionButton("url",
+    #              label = "Link to Web Page",
+    #              icon = icon("twitter"),
+    #              size = "lg",
+    #              style = "bordered",
+    #              onclick = sprintf("window.open('%s')", link)))})
+    #output$url <- renderText({recipe_data$url[recipe_data$title == input$InstructionRecipe]})
   })
   
   output$recipe_df <- DT::renderDataTable({
@@ -393,14 +442,14 @@ server <- function(input, output) {
     output$calories <- renderValueBox ({
       df <-
         df %>% group_by(Nutrition.Name) %>% summarize(Value = sum(Value))
-      u <- c('KJ(cal)', 'gram', 'gram', 'gram', 'mg', 'gram')
+      u <- c('cal', 'mgram', 'mgram', 'mgram', 'mgram', 'mgram')
       values$col1 <- data.frame(df, units = u)
       #validate(need(values$col1, ''))
       dat <-
         values$col1 %>% filter(Nutrition.Name == 'Energy') %>% dplyr::select(Value)
       if (nrow(dat) > 0) {
         valueBox(
-          paste(dat$Value, 'Kcal'),
+          paste(dat$Value, 'cal'),
           'Energy',
           icon = icon('fire'),
           color = 'red',
@@ -425,7 +474,7 @@ server <- function(input, output) {
         values$col1 %>% filter(Nutrition.Name == 'Protein') %>% dplyr::select(Value)
       if (nrow(df1) > 0) {
         valueBox(
-          paste(df1$Value, 'gm'),
+          paste(df1$Value, 'mg'),
           'Protein',
           icon = icon('child'),
           color = 'maroon',
@@ -448,7 +497,7 @@ server <- function(input, output) {
         values$col1 %>% filter(Nutrition.Name == 'Fat') %>% dplyr::select(Value)
       if (nrow(df1) > 0) {
         valueBox(
-          paste(df1$Value, 'gm'),
+          paste(df1$Value, 'mg'),
           'Fat',
           icon = icon('bacon'),
           color = 'yellow',
@@ -494,7 +543,7 @@ server <- function(input, output) {
         values$col1 %>% filter(Nutrition.Name == 'Saturated fat') %>% dplyr::select(Value)
       if (nrow(df1) > 0) {
         valueBox(
-          paste(df1$Value, 'gm'),
+          paste(df1$Value, 'mg'),
           'Saturated Fat',
           icon = icon('beer'),
           color = 'orange',
@@ -517,7 +566,7 @@ server <- function(input, output) {
         values$col1 %>% filter(Nutrition.Name == 'Sugar') %>% dplyr::select(Value)
       if (nrow(df1) > 0) {
         valueBox(
-          paste(df1$Value, 'gm'),
+          paste(df1$Value, 'mg'),
           'Sugar',
           icon = icon('stroopwafel'),
           color = 'lime',
@@ -535,5 +584,4 @@ server <- function(input, output) {
       }
     })
   })
-  
-}
+  }
