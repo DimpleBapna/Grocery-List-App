@@ -2,7 +2,3 @@
 .Rhistory
 .RData
 .Ruserdata
-data/*.csv
-data/*.json
-data/epirecipes (1)/*.csv
-data/recipe-ingredients-dataset/*
