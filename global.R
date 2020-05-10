@@ -1,10 +1,18 @@
-# DO NOT TOUCH THIS FILE!!!xx
-# IT IS NOT SUPPOSED TO BE TAMPERED 
-
 library(shiny)
+library(reshape2)
+library(plotly)
+library(tidyr)
+library(stringr)
+library(tidyverse)
+library(jsonlite)
+library(shinydashboard)
+library(shinydashboardPlus)
+library(dashboardthemes)
 source("./server/utilities.R")
 source("./server/server.R")
 source("./ui/ui.R")
+source("./data/data.R")
+source("./data/machine_learning.R")
 
 # Run the application 
 shinyApp(ui = ui, server = server)

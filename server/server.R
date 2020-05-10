@@ -1,19 +1,3 @@
-library(shiny)
-source('./server/utilities.R')
-source("./data/data.R")
-library(reshape2)
-library(plotly)
-library(tidyr)
-source("./data/machine_learning.R")
-
-source('./server/utilities.R')
-
-# define server logic
-
-library(stringr)
-
-
-
 server <- function(input, output) {
   values <-
     reactiveValues(dataset = NULL,
@@ -21,34 +5,35 @@ server <- function(input, output) {
   
   grocery_df <- shiny::reactiveValues()
   
-  recipe_df <- shiny::reactiveValues()
+  recipe_list <- shiny::reactiveValues()
   
-  grocery_data <- shiny::reactiveValues()
+  grocery_list <- shiny::reactiveValues()
   
   bubble_df<-shiny::reactiveValues()
   
   density_df<-shiny::reactiveValues()
-  
 
-  recipe_df$df <- data.frame("Recipes" = character(),
-                             stringsAsFactors = F)
+  recipe_list$df <- 
+    data.frame(
+      "Recipes" = character(),
+      stringsAsFactors = F
+      )
   
-  grocery_data$df <-
+  grocery_list$df <-
     data.frame(
       "Ingredients" = character(),
       "Weight" = integer(),
       stringsAsFactors = F
     )
   
-  
-  
   observeEvent(input$recipe, {
+    
     output$quantity <- renderUI({
       numericInput(
         'number',
         'Enter the number of servings',
         value = 1,
-        min = 0,
+        min = 1,
         max = 100,
         step = 1
       )
@@ -61,43 +46,63 @@ server <- function(input, output) {
         icon = icon("cart-plus")
       )
     })
-    values$deletedRows <- NULL
-    values$deletedRowIndices = list()
+    
+    values$deletedRowsForGroceryList <- NULL
+    values$deletedRowIndicesForGroceryList = list()
+    values$deletedRowsForRecipeList <- NULL
+    values$deletedRowIndicesForRecipeList = list()
   })
   
   observeEvent(input$Add, {
-    ingredients <-
-      as.vector(get_ingredients(input$recipe))
     
-    recipe_df$df[nrow(recipe_df$df) + 1,] <- input$recipe
+    #Insert the recipe selected in the recipe list
+    recipe_list$df[nrow(recipe_list$df) + 1,] <- input$recipe
+    
+    #Generate recipe list for UI
+    output$RecipeListUI <- renderUI({
+      box(
+        title = "Recipes...",
+        solidHeader = T,
+        width = 12,
+        collapsible = T,
+        DT::DTOutput("recipe_list")
+      )
+    })
+    
+    # Fetching ingredients of the selected recipe
+    ingredients <- as.vector(get_ingredients(input$recipe))
     
     #grocery_df$df <- as.data.frame(grocery_df$df, stringsAsFactors = F)
-    grocery_data$df <-
-      as.data.frame(grocery_data$df,
-                    "Weight" = integer(),
-                    stringsAsFactors = F)
-    Weights <- as.vector(get_Weight(input$recipe))
+    # grocery_list$df <-
+    #   as.data.frame(grocery_data$df,
+    #                 "Weight" = integer(),
+    #                 stringsAsFactors = F)
     
+    #Fetching ingredients weight for the selected recipe
+    weights <- as.vector(get_weight(input$recipe))
+    
+    #Updates the ingredients and weights in the grocery list
     for (i in 1:length(ingredients)) {
-      if (!(any(grocery_data$df$Ingredients == ingredients[i]))) {
-        grocery_data$df[nrow(grocery_data$df) + 1,] <-
-          c(ingredients[i], round(as.double(Weights[i]), 2))
+      #check if ingredient is not there in the grocery list generated
+      #If true- update the grocery list with the ingredient and it's weight
+      if (!(any(grocery_list$df$Ingredients == ingredients[i]))) {
+        grocery_list$df[nrow(grocery_list$df) + 1,] <-
+          c(ingredients[i], round(as.double(weights[i]), 2))
       }
-      
+      #else update the ingredient's weight
+      #add to the ingredient's weight
       else
       {
-        k <-
-          grocery_data$df[grocery_data$df$Ingredients == ingredients[i],]
+        # k <-
+        #   grocery_list$df[grocery_list$df$Ingredients == ingredients[i],]
         weight <-
-          as.double(grocery_data$df$Weight[grocery_data$df$Ingredients == ingredients[i]]) + as.double(Weights[i])
-        grocery_data$df$Weight[grocery_data$df$Ingredients == ingredients[i]] <-
+          as.double(grocery_list$df$Weight[grocery_list$df$Ingredients == ingredients[i]]) + as.double(weights[i])
+        grocery_list$df$Weight[grocery_list$df$Ingredients == ingredients[i]] <-
           round(weight, 2)
       }
-      
-      
-      
     }
     
+    #Generate Grocery list for UI
     output$groceryListUI <- renderUI({
       box(
         title = "Grocery List",
@@ -105,7 +110,7 @@ server <- function(input, output) {
         width = 12,
         collapsible = T,
         #h5(input$recipe),
-        DT::DTOutput("grocery_data")
+        DT::DTOutput("grocery_list")
 
       )
     })
@@ -124,29 +129,23 @@ server <- function(input, output) {
    # )
    # })
     
-    output$RecipeListUI <- renderUI({
-      box(
-        title = "Recipes...",
-        solidHeader = T,
-        width = 12,
-        collapsible = T,
-        div(DT::DTOutput("recipe_df"), style = "font-size: 70%;")
-      )
-    })
-    
+    #Generates drop down with all the recipe selected for UI- to get the instructons
     output$instructionUI <- renderUI({
       selectInput("InstructionRecipe",
                   label = "Instructions",
-                  choices = recipe_df$df$Recipes)
+                  choices = recipe_list$df$Recipes)
     })
+    
+    #Generates drop down with all the recipe selected for UI- to go to the URL
     output$instruction_URL <- renderUI({
       selectInput("InstructionURL",
                   label = "Instructions",
-                  choices = recipe_df$df$Recipes)
+                  choices = recipe_list$df$Recipes)
     })
+    
+    #Generates 
     observeEvent(input$InstructionURL,{
       link <- recipe_data$url[recipe_data$title == input$InstructionURL]
-      
       output$url <- renderUI({
         return(actionButton("url",
                             label = "Link to Web Page",
@@ -159,7 +158,7 @@ server <- function(input, output) {
     df <-
       data.frame('Nutrition.Name' = character(), 'Value' = integer())
     values$number <- input$number
-    for (i in recipe_df$df$Recipes) {
+    for (i in recipe_list$df$Recipes) {
       de <- nutri_table(recipe_data, i, values$number)
       df <- rbind(df, de)
     }
@@ -175,7 +174,7 @@ server <- function(input, output) {
     
     output$centralPlot <- renderPlotly({
       aggregation_of_ingredients <-
-        grocery_data$df %>% group_by(Ingredients) %>% summarise(totalWeight = round(sum(Weight),2))
+        grocery_list$df %>% group_by(Ingredients) %>% summarise(totalWeight = round(sum(Weight),2))
       trace2 <- list(
         hole = 0.8,
         type = "pie",
@@ -229,7 +228,7 @@ server <- function(input, output) {
         'units' = character(),
         'ingredients' = character()
       )
-    for (i in recipe_df$df$Recipes) {
+    for (i in recipe_list$df$Recipes) {
       row_data <- bubble_data %>% filter(title == c(i))
       bubble_df <- rbind(bubble_df, row_data)
     }
@@ -306,7 +305,7 @@ server <- function(input, output) {
     output$pie_chart_choices<-renderUI({
       selectInput("InputRecipe",
                   label = "Nutritions",
-                  choices = recipe_df$df$Recipes)
+                  choices = recipe_list$df$Recipes)
     })
     
    
@@ -356,7 +355,7 @@ server <- function(input, output) {
         
         matched_rules <- data.frame(RHS = as.character(), confidence = as.integer(), lift = as.integer())
         for(i in 1:length(mutated_rules$to)){
-          if(all(mutated_rules$to[[i]] %in% grocery_data$df$Ingredients)){
+          if(all(mutated_rules$to[[i]] %in% grocery_list$df$Ingredients)){
             matched_rules <- rbind(matched_rules, mutated_rules[i,c("RHS","confidence","lift")])
           
           }
@@ -376,7 +375,7 @@ server <- function(input, output) {
   })
   
   observeEvent(input$InstructionRecipe, {
-    instructions <- get_instructions(recipe_df$df)
+    instructions <- get_instructions(recipe_list$df)
     output$instructionSteps <- renderUI({
       i <- 1
       steps <- ""
@@ -411,22 +410,64 @@ server <- function(input, output) {
     #output$url <- renderText({recipe_data$url[recipe_data$title == input$InstructionRecipe]})
   })
   
-  output$recipe_df <- DT::renderDataTable({
-    recipe_df$df
-  }, rownames = FALSE, options = list(pageLength = 7))
+  #output$recipe_df <- DT::renderDataTable({
+  #  recipe_df$df
+  #}, rownames = FALSE, options = list(pageLength = 7))
   
-  output$grocery_data <-
-    DT::renderDataTable(deleteButtonColumn(grocery_data$df, 'delete_button'))
+  output$recipe_list <-
+    DT::renderDataTable(add_deleteButton_RecipeList(recipe_list$df, 'delete_button'))
   
-  observeEvent(input$deletePressed, {
-    rowNum <- parseDeleteEvent(input$deletePressed)
-    grocery_data$df <-
-      data.frame(grocery_data$df, stringsAsFactors = F)
-    dataRow <- grocery_data$df[rowNum, ]
-    values$deletedRows <- rbind(dataRow, values$deletedRows)
-    values$deletedRowIndices <-
-      append(values$deletedRowIndices, rowNum, after = 0)
-    grocery_data$df <- grocery_data$df[-(rowNum), ]
+  output$grocery_list <-
+    DT::renderDataTable(add_deleteButton_GroceryList(grocery_list$df, 'delete_button'))
+  
+  observeEvent(input$deletePressedForGrocery, {
+    rowNum <- parseDeleteEvent(input$deletePressedForGrocery)
+    grocery_list$df <-
+      data.frame(grocery_list$df, stringsAsFactors = F)
+    dataRow <- grocery_list$df[rowNum, ]
+    values$deletedRowsForGroceryList <- rbind(dataRow, values$deletedRowsForGroceryList)
+    values$deletedRowIndicesForGroceryList <-
+      append(values$deletedRowIndicesForGroceryList, rowNum, after = 0)
+    grocery_list$df <- grocery_list$df[-(rowNum), ]
+  })
+  
+  observeEvent(input$deletePressedForRecipe, {
+    rowNum <- parseDeleteEvent(input$deletePressedForRecipe)
+    recipe_name <- recipe_list$df[rowNum,]
+    print("Dimple...............................................................")
+    print(recipe_name)
+    #get ingredients for the recipe to be deleted
+    ingredients <- as.vector(get_ingredients(recipe_name))
+    weights <- as.vector(get_weight(recipe_name))
+    #check if the ingredient is in the grocery list, and check it's weight too
+    for (i in 1:length(ingredients)) {
+      rowNumToBeDeleted <- match(ingredients[i], grocery_list$df$Ingredients)
+      print(rowNumToBeDeleted)
+      if (!(any(grocery_list$df$Ingredients == ingredients[i]))) {
+        print("ABC..............................................................")
+      }
+      else
+      {
+        if (grocery_list$df$Weight[rowNumToBeDeleted] > weights[i]) {
+          #update weight
+          grocery_list$df$Weight[rowNumToBeDeleted] <- grocery_list$df$Weight[ingredients[i]] - as.double(weights[i])
+        }
+        else {
+          #delete ingredient
+          grocery_list$df <- grocery_list$df[-(rowNumToBeDeleted),]
+        }
+      }
+    }
+    #if ingredient in grocery list 
+      # if weight == recipe_name.ingredients.weight, then remove ingredient
+      # else update weight in the ingredients list 
+    recipe_list$df <-
+      data.frame(recipe_list$df, stringsAsFactors = F)
+    dataRow <- recipe_list$df[rowNum, ]
+    values$deletedRowsForRecipeList <- rbind(dataRow, values$deletedRowsForRecipe)
+    values$deletedRowIndicesForRecipeList <-
+      append(values$deletedRowIndicesForRecipeList, rowNum, after = 0)
+    recipe_list$df <- recipe_list$df[-(rowNum), ]
   })
   
   df <-
@@ -434,7 +475,7 @@ server <- function(input, output) {
   
   observeEvent(input$Add, {
     values$number <- input$number
-    for (i in recipe_df$df$Recipes) {
+    for (i in recipe_list$df$Recipes) {
       de <- nutri_table(recipe_data, i, values$number)
       df <- rbind(df, de)
     }
