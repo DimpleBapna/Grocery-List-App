@@ -64,7 +64,7 @@ add_deleteButton_RecipeList <- function(df, id, ...) {
   }
   
   df <- data.frame(df)
-  #names(df) <- c("Recipes")
+  names(df) <- c("Recipes")
   deleteCol <- unlist(lapply(seq_len(nrow(df)), create_button))
   
   # Return a data table

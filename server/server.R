@@ -54,10 +54,15 @@ server <- function(input, output) {
   })
   
   observeEvent(input$Add, {
+
+    recipe_list$df <-
+      data.frame(recipe_list$df, stringsAsFactors = F)
+    grocery_list$df <- data.frame(grocery_list$df,
+                                  stringsAsFactors = F)
     
     #Insert the recipe selected in the recipe list
     recipe_list$df[nrow(recipe_list$df) + 1,] <- input$recipe
-    
+
     #Generate recipe list for UI
     output$RecipeListUI <- renderUI({
       box(
@@ -73,10 +78,6 @@ server <- function(input, output) {
     ingredients <- as.vector(get_ingredients(input$recipe))
     
     #grocery_df$df <- as.data.frame(grocery_df$df, stringsAsFactors = F)
-    # grocery_list$df <-
-    #   as.data.frame(grocery_data$df,
-    #                 "Weight" = integer(),
-    #                 stringsAsFactors = F)
     
     #Fetching ingredients weight for the selected recipe
     weights <- as.vector(get_weight(input$recipe))
@@ -156,7 +157,7 @@ server <- function(input, output) {
     })
     
     df <-
-      data.frame('Nutrition.Name' = character(), 'Value' = integer())
+      data.frame('Nutrition.Name' = character(), 'Value' = integer(), stringsAsFactors = F)
     values$number <- input$number
     for (i in recipe_list$df$Recipes) {
       de <- nutri_table(recipe_data, i, values$number)
@@ -433,24 +434,32 @@ server <- function(input, output) {
   
   observeEvent(input$deletePressedForRecipe, {
     rowNum <- parseDeleteEvent(input$deletePressedForRecipe)
+    recipe_list$df <-
+      as.data.frame(recipe_list$df, stringsAsFactors = F)
+    grocery_list$df <-
+      data.frame(grocery_list$df, stringsAsFactors = F)
+    dataRow <- recipe_list$df[rowNum, ]
     recipe_name <- recipe_list$df[rowNum,]
-    print("Dimple...............................................................")
-    print(recipe_name)
-    #get ingredients for the recipe to be deleted
+    values$deletedRowsForRecipeList <- rbind(dataRow, values$deletedRowsForRecipe)
+    values$deletedRowIndicesForRecipeList <-
+      append(values$deletedRowIndicesForRecipeList, rowNum, after = 0)
+    recipe_list$df <- recipe_list$df[-(rowNum), ]
+
+    #get ingredients and weights for the recipe to be deleted
     ingredients <- as.vector(get_ingredients(recipe_name))
     weights <- as.vector(get_weight(recipe_name))
+    
     #check if the ingredient is in the grocery list, and check it's weight too
     for (i in 1:length(ingredients)) {
       rowNumToBeDeleted <- match(ingredients[i], grocery_list$df$Ingredients)
-      print(rowNumToBeDeleted)
       if (!(any(grocery_list$df$Ingredients == ingredients[i]))) {
-        print("ABC..............................................................")
+        print("Do Nothing!")
       }
       else
       {
-        if (grocery_list$df$Weight[rowNumToBeDeleted] > weights[i]) {
+        if (grocery_list$df$Weight[rowNumToBeDeleted] > round(as.double(weights[i]),2)) {
           #update weight
-          grocery_list$df$Weight[rowNumToBeDeleted] <- grocery_list$df$Weight[ingredients[i]] - as.double(weights[i])
+          grocery_list$df$Weight[rowNumToBeDeleted] <- round(grocery_list$df$Weight[rowNumToBeDeleted] - round(as.double(weights[i]),2),2)
         }
         else {
           #delete ingredient
@@ -458,20 +467,11 @@ server <- function(input, output) {
         }
       }
     }
-    #if ingredient in grocery list 
-      # if weight == recipe_name.ingredients.weight, then remove ingredient
-      # else update weight in the ingredients list 
-    recipe_list$df <-
-      data.frame(recipe_list$df, stringsAsFactors = F)
-    dataRow <- recipe_list$df[rowNum, ]
-    values$deletedRowsForRecipeList <- rbind(dataRow, values$deletedRowsForRecipe)
-    values$deletedRowIndicesForRecipeList <-
-      append(values$deletedRowIndicesForRecipeList, rowNum, after = 0)
-    recipe_list$df <- recipe_list$df[-(rowNum), ]
+
   })
   
   df <-
-    data.frame('Nutrition.Name' = character(), 'Value' = integer())
+    data.frame('Nutrition.Name' = character(), 'Value' = integer(), stringsAsFactors = F)
   
   observeEvent(input$Add, {
     values$number <- input$number
